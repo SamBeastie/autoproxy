@@ -30,6 +30,7 @@ def draw_card(c, x, y, card, draw_bar=True, draw_dots=True):
 
     # Mana dots
     if draw_dots:
+        c.saveState()
         dot_y = top_y - 4
         dot_r = 2
         symbols = re.findall(r"\{([^}]+)\}", card["mana_cost"])
@@ -50,13 +51,13 @@ def draw_card(c, x, y, card, draw_bar=True, draw_dots=True):
                 c.setFillColor(colors.gray)
                 c.circle(cx, dot_y, dot_r, fill=1, stroke=0)
             cursor += w
-    c.setFillColor(colors.black)
-    c.setStrokeColor(colors.black)
+        c.restoreState()
 
     # Type line
     type_y = top_y - C.MAX_FONT*1.6
     type_size = fit_text(c, card["type_line"], C.CARD_WIDTH - 2*C.TEXT_MARGIN)
     c.setFont(C.FONT, type_size)
+    c.setFillColor(colors.black)
     c.drawString(x + C.TEXT_MARGIN, type_y, card["type_line"])
 
     # Color bar
@@ -65,6 +66,7 @@ def draw_card(c, x, y, card, draw_bar=True, draw_dots=True):
     bar_x = x + C.TEXT_MARGIN
     bar_w = C.CARD_WIDTH - 2*C.TEXT_MARGIN
     if draw_bar:
+        c.saveState()
         if card["is_land"]:
             colors_out = card["produced_mana"]
             if colors_out:
@@ -83,9 +85,12 @@ def draw_card(c, x, y, card, draw_bar=True, draw_dots=True):
             else:
                 c.setFillColor(colors.gold)
             c.rect(bar_x, bar_y, bar_w, bar_h, fill=1, stroke=0)
+        c.restoreState()
 
     # Bottom line
     bottom_y = y + C.TEXT_MARGIN
+    c.setFillColor(colors.black)
+    c.setStrokeColor(colors.black)
     rarity = C.RARITY_MAP.get(card["rarity"], "?")
     c.setFont(C.FONT, C.MAX_FONT)
     c.drawString(x + C.TEXT_MARGIN, bottom_y, f"{card['set']} {rarity}")
@@ -122,6 +127,7 @@ def draw_card(c, x, y, card, draw_bar=True, draw_dots=True):
         style.leading = style.fontSize*1.2
         p = Paragraph(oracle, style)
         w, h = p.wrap(oracle_w, oracle_h)
+    c.setFillColor(colors.black)
     p.drawOn(c, x + C.TEXT_MARGIN, oracle_bottom + (oracle_h - h)/2)
 
 def render_pdf(deck, output_file="deck.pdf", draw_bar=True, draw_dots=True):
