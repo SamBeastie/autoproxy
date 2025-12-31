@@ -1,0 +1,13 @@
+setup.py
+autoproxy/__init__.py
+autoproxy/cli.py
+autoproxy/constants.py
+autoproxy/deckparse.py
+autoproxy/render.py
+autoproxy/scryfall.py
+autoproxy.egg-info/PKG-INFO
+autoproxy.egg-info/SOURCES.txt
+autoproxy.egg-info/dependency_links.txt
+autoproxy.egg-info/entry_points.txt
+autoproxy.egg-info/requires.txt
+autoproxy.egg-info/top_level.txt

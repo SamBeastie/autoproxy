@@ -1,0 +1,2 @@
+[console_scripts]
+autoproxy = autoproxy.cli:main
