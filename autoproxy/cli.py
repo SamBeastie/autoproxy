@@ -1,51 +1,110 @@
+#!/usr/bin/env python3
 import argparse
 import sys
-from .deckparse import parse_decklist
-from .scryfall import enrich_deck
-from .render import render_pdf
+import requests
+from . import render
+
+SCRYFALL_URL = "https://api.scryfall.com/cards/named"
+
+def fetch_card_data(name):
+    """Query Scryfall for a card and return a standardized dictionary."""
+    resp = requests.get(SCRYFALL_URL, params={"fuzzy": name})
+    if resp.status_code != 200:
+        print(f"Warning: Could not fetch {name}, skipping.")
+        return None
+    data = resp.json()
+
+    # Determine if this is a double-faced card
+    card_faces_data = data.get("card_faces", None)
+    faces = []
+    if card_faces_data:
+        for face in card_faces_data:
+            faces.append({
+                "name": face.get("name", ""),
+                "mana_cost": face.get("mana_cost", ""),
+                "type_line": face.get("type_line", ""),
+                "oracle_text": face.get("oracle_text", ""),
+                "colors": face.get("colors", []),
+                "power": face.get("power", None),
+                "toughness": face.get("toughness", None)
+            })
+
+    return {
+        "name": data.get("name", ""),
+        "mana_cost": data.get("mana_cost", ""),
+        "type_line": data.get("type_line", ""),
+        "oracle_text": data.get("oracle_text", ""),
+        "colors": data.get("colors", []),
+        "power": data.get("power", None),
+        "toughness": data.get("toughness", None),
+        "rarity": data.get("rarity", "?"),
+        "set": data.get("set", ""),
+        "is_land": "land" in data.get("type_line", "").lower(),
+        "produced_mana": data.get("produced_mana", []),
+        "count": 1,
+        "card_faces": faces  # always a list
+    }
+
+def parse_plaintext_deck(lines):
+    """Convert plaintext Moxfield decklist to a list of card dicts."""
+    deck = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(maxsplit=1)
+        if len(parts) != 2:
+            print(f"Skipping invalid line: {line}")
+            continue
+        try:
+            count = int(parts[0])
+            name = parts[1]
+        except ValueError:
+            print(f"Skipping invalid line: {line}")
+            continue
+
+        card_data = fetch_card_data(name)
+        if card_data:
+            card_data["count"] = count
+            deck.append(card_data)
+    return deck
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate minimalist MTG proxy PDFs from decklists"
-    )
-    parser.add_argument("-f", "--file", help="Decklist file")
-    parser.add_argument("-o", "--output", help="Output PDF filename")
-    parser.add_argument("--no-bar", action="store_true", help="Disable color bar")
+    parser = argparse.ArgumentParser(description="Minimalist MTG proxy generator")
+    parser.add_argument("-f", "--file", help="Plaintext decklist file")
+    parser.add_argument("-o", "--out-file", help="Output PDF filename", default="deck.pdf")
+    parser.add_argument("--no-bar", action="store_true", help="Disable color bars")
     parser.add_argument("--no-dots", action="store_true", help="Disable mana dots")
     args = parser.parse_args()
 
-    # Input
     if args.file:
-        with open(args.file) as f:
-            deck_text = f.read()
-        deck_name = args.output or args.file.rsplit(".", 1)[0]
-        print(f"[INFO] Loaded decklist from {args.file} ({len(deck_text.splitlines())} lines).")
-    elif not sys.stdin.isatty():
-        deck_text = sys.stdin.read()
-        deck_name = "deck"
-        print(f"[INFO] Received decklist from stdin ({len(deck_text.splitlines())} lines).")
+        try:
+            with open(args.file, "r") as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"Error reading file {args.file}: {e}")
+            sys.exit(1)
+        output_file = args.out_file
     else:
-        deck_name = input("Deck name: ").strip()
-        print("Paste decklist below. End input with Ctrl-D (Unix) or Ctrl-Z+Enter (Windows):")
-        deck_text = sys.stdin.read()
-        print(f"[INFO] Finished reading decklist ({len(deck_text.splitlines())} lines).")
+        output_file = input("Enter a name for the PDF: ").strip() or "deck.pdf"
+        print("Paste your plaintext Moxfield decklist below (Ctrl+D to finish):")
 
-    # Determine output file
-    output_file = args.output or f"{deck_name.replace(' ', '_').lower()}.pdf"
+        # Read exactly like before, but add feedback
+        raw_input = sys.stdin.read()  # read until Ctrl+D
+        print("\nInput received. Processing deck...")  # feedback
+        lines = raw_input.splitlines()  # preserves empty lines and spacing
 
-    # Parse deck and fetch Scryfall data
-    deck = parse_decklist(deck_text)
-    enrich_deck(deck)
+    deck = parse_plaintext_deck(lines)
 
-    # Render PDF
-    render_pdf(
-        deck,
-        output_file=output_file,
-        draw_bar=not args.no_bar,
-        draw_dots=not args.no_dots
-    )
+    if not deck:
+        print("No valid cards to render. Exiting.")
+        sys.exit(1)
 
-    print(f"[SUCCESS] Generated PDF: {output_file}")
+    print(f"Rendering PDF to {output_file}...")
+    render.render_pdf(deck, output_file=output_file,
+                      draw_bar=not args.no_bar,
+                      draw_dots=not args.no_dots)
+    print("Done!")
 
 if __name__ == "__main__":
     main()
