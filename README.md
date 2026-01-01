@@ -44,10 +44,12 @@ With no options, cards are generated with a colored line to evoke the background
 
 ### Deck list format
 Any plaintext list with one card per line will work. For example:
-```1 Delver of Secrets
+```
+1 Delver of Secrets
 1 Lightning Bolt
 1 Island
-1 Mountain ```
+1 Mountain
+```
 
 Counts are optional. Defaults to 1.
 
