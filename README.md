@@ -57,3 +57,7 @@ Counts are optional. Defaults to 1.
 * Scryfall's public API
 * Intended for personal use and playtesting
 * Not at all affiliated with Wizards of the Coast
+
+<p align="center">
+  <img src="images/proxy-cards.png" alt="Sample proxy cards" width="700">
+</p>
