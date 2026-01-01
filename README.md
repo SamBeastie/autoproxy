@@ -47,7 +47,7 @@ Any plaintext list with one card per line will work. For example:
 ```1 Delver of Secrets
 1 Lightning Bolt
 1 Island
-1 Mountain```
+1 Mountain ```
 
 Counts are optional. Defaults to 1.
 
